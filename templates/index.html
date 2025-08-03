@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Court Case Data Fetcher</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Faridabad District Court Case Status</h1>
+        <form id="caseSearchForm">
+            <div class="form-group">
+                <label for="caseType">Case Type:</label>
+                <select id="caseType" name="caseType" required>
+                    <option value="">Select Case Type</option>
+                    {% for case_type in case_types %}
+                    <option value="{{ case_type }}">{{ case_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="caseNumber">Case Number:</label>
+                <input type="text" id="caseNumber" name="caseNumber" required placeholder="e.g., 123">
+            </div>
+            <div class="form-group">
+                <label for="filingYear">Filing Year:</label>
+                <select id="filingYear" name="filingYear" required>
+                    <option value="">Select Year</option>
+                    {% for year in filing_years %}
+                    <option value="{{ year }}">{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit">Fetch Case Details</button>
+        </form>
+
+        <div id="loading" class="hidden">
+            <p>Fetching data... This may take a moment.</p>
+        </div>
+
+        <div id="results" class="hidden">
+            <h2>Case Details</h2>
+            <p><strong>Parties:</strong> <span id="partiesNames"></span></p>
+            <p><strong>Filing Date:</strong> <span id="filingDate"></span></p>
+            <p><strong>Next Hearing Date:</strong> <span id="nextHearingDate"></span></p>
+            <h3>Recent Orders/Judgments:</h3>
+            <ul id="pdfLinks">
+                </ul>
+        </div>
+
+        <div id="error" class="hidden">
+            <h2>Error:</h2>
+            <p id="errorMessage"></p>
+        </div>
+
+        <hr>
+        <p><a href="/history">View Recent Queries History</a></p>
+    </div>
+
+    <script>
+        document.getElementById('caseSearchForm').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('results').classList.add('hidden');
+            document.getElementById('error').classList.add('hidden');
+
+            const formData = new FormData(this);
+            const response = await fetch('/fetch_case', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            document.getElementById('loading').classList.add('hidden');
+
+            if (data.success) {
+                document.getElementById('partiesNames').textContent = data.data.parties_names || 'N/A';
+                document.getElementById('filingDate').textContent = data.data.filing_date || 'N/A';
+                document.getElementById('nextHearingDate').textContent = data.data.next_hearing_date || 'N/A';
+
+                const pdfLinksList = document.getElementById('pdfLinks');
+                pdfLinksList.innerHTML = ''; // Clear previous links
+
+                if (data.data.pdf_links) {
+                    const links = JSON.parse(data.data.pdf_links);
+                    if (links.length > 0) {
+                        links.forEach(link => {
+                            const li = document.createElement('li');
+                            const a = document.createElement('a');
+                            a.href = link.url;
+                            a.textContent = `Order/Judgment - ${link.date}`;
+                            a.target = "_blank"; // Open in new tab
+                            a.download = `order_${link.date}.pdf`; // Suggest filename
+                            li.appendChild(a);
+                            pdfLinksList.appendChild(li);
+                        });
+                    } else {
+                        pdfLinksList.innerHTML = '<li>No PDF links found for orders/judgments.</li>';
+                    }
+                } else {
+                    pdfLinksList.innerHTML = '<li>No PDF links found for orders/judgments.</li>';
+                }
+
+                document.getElementById('results').classList.remove('hidden');
+            } else {
+                document.getElementById('errorMessage').textContent = data.message || 'An unknown error occurred.';
+                document.getElementById('error').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

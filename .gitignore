@@ -1,0 +1,20 @@
+# .gitignore
+
+# Virtual environment
+venv/
+
+# Python-specific files
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE files (e.g., VS Code)
+.vscode/
+
+# Compiled files
+dist/
+build/
+*.egg-info/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
